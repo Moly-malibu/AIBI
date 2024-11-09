@@ -112,6 +112,7 @@ def Commodity():
         from sklearn.preprocessing import OneHotEncoder
         from sklearn.compose import ColumnTransformer
         from sklearn.pipeline import Pipeline
+        from sklearn.base import BaseEstimator, TransformerMixin
         import matplotlib.pyplot as plt
         
         st.subheader("Dataset Info", divider=True)
@@ -123,10 +124,10 @@ def Commodity():
         
         # Define target and features
         target = 'flow'
-        features = ['country_or_area', 'year', 'comm_code', 
-                    'trade_usd', 'weight_kg', 'quantity_name', 'category']
+        features = ['country_or_area', 'commodity', 'flow',
+                   'quantity_name', 'category']
 
-        # Check if all features are in the DataFrame
+        # # Check if all features are in the DataFrame
         if not all(col in df.columns for col in features + [target]):
             st.error("Some feature columns or target column are missing from the dataset.")
         else:
@@ -144,7 +145,7 @@ def Commodity():
             # Create a ColumnTransformer with OneHotEncoder for categorical features
             preprocessor = ColumnTransformer(
                 transformers=[
-                    ('cat', OneHotEncoder(), X.select_dtypes(include=['object']).columns.tolist())
+                    ('cat', OneHotEncoder(handle_unknown='ignore'), X.select_dtypes(include=['object']).columns.tolist())
                 ],
                 remainder='passthrough'  # Keep other columns unchanged
             )
@@ -154,6 +155,13 @@ def Commodity():
                 ('preprocessor', preprocessor),  # Preprocessing step
                 ('gnb', GaussianNB())             # Gaussian Naive Bayes model
             ])
+            # Define a custom transformer to convert sparse matrices to dense
+            class ToDenseTransformer(BaseEstimator, TransformerMixin):
+                def fit(self, X, y=None):
+                    return self
+
+                def transform(self, X):
+                    return X.toarray()
 
             # Split into training and testing sets
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
