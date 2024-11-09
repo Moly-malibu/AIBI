@@ -103,49 +103,88 @@ def Commodity():
     #     # Additional code for visualization features can go here
     
 
-    # elif selected_option == "Predictions":
-        # import pandas as pd
-        # # pipeline
-        # from sklearn.preprocessing import OneHotEncoder
-        # from sklearn.preprocessing import MinMaxScaler
-        # from sklearn.compose import ColumnTransformer
-        # st.subheader("Dataset Info", divider=True)
-        # supply = pd.read_csv('commodity_trade_statistics_data.csv')
-        # supply = pd.DataFrame(supply)
-        # country_nan = supply[supply['weight_kg'].isnull()].groupby('country_or_area').size().sort_values(ascending=False)
-        # category_nan = supply[supply['weight_kg'].isnull()].groupby('category').size().sort_values(ascending=False)
-        # percentage_miss = supply.isnull().sum() * 100/len(supply)
-        # supply.nunique(axis=0)
-        # df_clean=supply.dropna()
-        # encoder=OnehotEncoder()
-        # # one-hot encode text/categorical attributes
-        # country_cat_1hot = cat_encoder.fit_transform(df[['country_or_area']])
-        # flow_cat_1hot = cat_encoder.fit_transform(df[['flow']])
-        # category_cat_1hot = cat_encoder.fit_transform(df[['category']])
-        # category_cat_1hot
-        # #Feature
-        # scaler = MinMaxScaler()
-        # data = df[['trade_usd', 'weight_kg', 'quantity']]
-        # scaled = scaler.fit_transform(data)
-        # #Transformation Pipeline
-        # def transform_data(num_at, cat_at, dataframe):
-        #     pipeline = ColumnTransformer([
-        #         ('num', MinMaxScaler(), num_at),
-        #         ('cat', OneHotEncoder(handle_unknown='ignore'), cat_at), #ignore errors because dataset is huge and might encounter new categories
-        #     ])
-        # return pipeline.fit_transform(dataframe), pipeline
-        # #Train and Test set
-        # train_set, test_set = train_test_split(df, test_size=0.3, random_state=42)
-        # def prepare_data(dataset, chosen_column, df_num_attribs, df_cat_attribs, test=False):
-        #     df_input = dataset.drop(chosen_column, axis=1)
-        #     df_output = dataset[chosen_column].copy()
+    elif selected_option == "Predictions":
+        import streamlit as st
+        import pandas as pd
+        from sklearn.model_selection import train_test_split
+        from sklearn.naive_bayes import GaussianNB
+        from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
+        from sklearn.preprocessing import OneHotEncoder
+        from sklearn.compose import ColumnTransformer
+        from sklearn.pipeline import Pipeline
+        import matplotlib.pyplot as plt
+        
+        st.subheader("Dataset Info", divider=True)
+        supply = pd.read_csv('commodity_trade_statistics_data.csv')
+        df = pd.DataFrame(supply)
+        
+        df['country_or_area'] = df['country_or_area'].astype(str)
+        df['weight_kg'].fillna('weight_kgn', inplace=True)
+        
+        # Define target and features
+        target = 'flow'
+        features = ['country_or_area', 'year', 'comm_code', 
+                    'trade_usd', 'weight_kg', 'quantity_name', 'category']
 
+        # Check if all features are in the DataFrame
+        if not all(col in df.columns for col in features + [target]):
+            st.error("Some feature columns or target column are missing from the dataset.")
+        else:
+            # Prepare features and target variable
+            X = df[features]
+            y = df[target]
+
+            # Convert categorical columns to string if they contain mixed types
+            for col in X.select_dtypes(include=['object']).columns:
+                X[col] = X[col].astype(str)
+
+            # Handle NaN values by filling with a placeholder or dropping them
+            X.fillna('Unknown', inplace=True)
+
+            # Create a ColumnTransformer with OneHotEncoder for categorical features
+            preprocessor = ColumnTransformer(
+                transformers=[
+                    ('cat', OneHotEncoder(), X.select_dtypes(include=['object']).columns.tolist())
+                ],
+                remainder='passthrough'  # Keep other columns unchanged
+            )
+
+            # Create a pipeline for preprocessing and model fitting
+            pipeline = Pipeline([
+                ('preprocessor', preprocessor),  # Preprocessing step
+                ('gnb', GaussianNB())             # Gaussian Naive Bayes model
+            ])
+
+            # Split into training and testing sets
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
+
+            # Fit the model
+            pipeline.fit(X_train, y_train)
+
+            # Make predictions on test data
+            test_predicted = pipeline.predict(X_test)
+
+            # Evaluate the model using confusion matrix
+            cm = confusion_matrix(y_test, test_predicted)
             
-        #     if not test:
-        #         df_prepared, pipeline = transform_data(df_num_attribs, df_cat_attribs, df_input)
-        #         return df_prepared, df_output, pipeline
-        #     else:
-        #         return df_input, df_output
+            # Display confusion matrix using ConfusionMatrixDisplay
+            disp = ConfusionMatrixDisplay(confusion_matrix=cm,
+                                        display_labels=pipeline.classes_)
+
+            # Plotting the confusion matrix in Streamlit
+            st.subheader("Confusion Matrix")
+            
+            fig, ax = plt.subplots(figsize=(8, 6))
+            disp.plot(cmap=plt.cm.Blues, ax=ax)
+            plt.title("Confusion Matrix")
+            
+            st.pyplot(fig)
+
+            # Display classification report (optional)
+            st.subheader("Classification Report")
+            report = classification_report(y_test, test_predicted)
+            st.text(report)
+        
         
         
 
