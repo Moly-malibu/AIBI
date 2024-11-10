@@ -27,7 +27,7 @@ def Commodity():
     st.sidebar.header("Menu")
 
     # Define options for the selectbox
-    options = ["Commodity: Statistics", "Visualization", "Predictions"]
+    options = ["Commodity: Statistics", "Visualization", "Category", "Commodity","Predictions"]
 
     # Create a selectbox in the sidebar
     selected_option = st.sidebar.selectbox("Choose an option:", options)
@@ -71,10 +71,16 @@ def Commodity():
         plt.ylabel("year")
         plt.xticks(rotation=45)
         st.pyplot(plt)
+        
+        # Optional: Display additional insights based on p-value
+        if p_value < 0.05:
+            st.write("The result is statistically significant (p < 0.05).")
+        else:
+            st.write("The result is not statistically significant (p >= 0.05).")
 
     elif selected_option == "Visualization":
-        st.write("Select different variables to analyze: Categories")
         st.subheader("Dataset Visualization", divider=True)
+        st.write("Select different variables to analyze: Categories")
         supply = pd.read_csv('commodity_trade_statistics_data.csv')
         supply = pd.DataFrame(supply)
         
@@ -98,101 +104,168 @@ def Commodity():
         # Display the figure in Streamlit
         st.plotly_chart(fig)
 
-    # elif selected_option == "Visualization":
-    #     st.write("Visualize your data here.")
-    #     # Additional code for visualization features can go here
+    elif selected_option == "Commodity":
+        import streamlit as st
+        import pandas as pd
+        import plotly.express as px
+
+        # Sample dataset creation
+        st.subheader("Export and Import by Commodity", divider=True)
+        supply = pd.read_csv('commodity_trade_statistics_data.csv')
+        df = pd.DataFrame(supply)
+
+        # Streamlit app layout
+        st.title("Export and Import by Products)
+
+        # Selectbox for grouping columns
+        group_by_country = st.selectbox("Select Flow", options=df['flow'].unique())
+        group_by_product = st.selectbox("Select category", options=df['category'].unique())
+
+        # Grouping the data based on user selection
+        grouped_data = df.groupby(['flow']).sum().reset_index()
+
+        # Filter based on user selection
+        filtered_data = grouped_data[
+            (grouped_data['flow'] == group_by_country) & 
+            (grouped_data['category'] == group_by_product)
+        ]
+
+        # Display the filtered data
+        st.write("Grouped Data:")
+        st.dataframe(filtered_data)
+
+        # Create a bar chart using Plotly
+        fig = px.bar(filtered_data, x='flow', y='category',
+                    title=f'category for {group_by_product} in {group_by_country}',
+                    labels={'category': 'flow', 'category': 'category'},
+                    color='category')
+
+        # Show the plot in Streamlit
+        st.plotly_chart(fig)
+    
+    
+    
+    elif selected_option == "Category":
+        import streamlit as st
+        import pandas as pd
+        import plotly.express as px
+        st.title("Commodity Trade by Country")
+        # Load the dataset
+        supply = pd.read_csv('commodity_trade_statistics_data.csv')
+
+        # Streamlit app layout
+     
+
+        # Selectbox for grouping by country or area
+        selected_country = st.selectbox("Select Country or Area", options=supply['country_or_area'].unique())
+        selected_commodity = st.selectbox("Select Commodity", options=supply['commodity'].unique())
+
+        # Filter the data based on user selection
+        filtered_data = supply[(supply['country_or_area'] == selected_country) & 
+                            (supply['commodity'] == selected_commodity)]
+
+        # Grouping the data by year and summing up trade values
+        grouped_data = filtered_data.groupby('year').agg({'trade_usd': 'sum'}).reset_index()
+
+        # Display the grouped data
+        st.write("Grouped Data:")
+        st.dataframe(grouped_data)
+
+        # Create a bar chart using Plotly
+        fig = px.bar(grouped_data, x='year', y='trade_usd',
+                    title=f'Trade Value for {selected_commodity} in {selected_country}',
+                    labels={'trade_usd': 'Total Trade Value (USD)', 'year': 'Year'})
+
+        # Show the plot in Streamlit
+        st.plotly_chart(fig)
     
 
     elif selected_option == "Predictions":
-        import streamlit as st
         import pandas as pd
+        import numpy as np
         from sklearn.model_selection import train_test_split
-        from sklearn.naive_bayes import GaussianNB
-        from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay, classification_report
         from sklearn.preprocessing import OneHotEncoder
-        from sklearn.compose import ColumnTransformer
-        from sklearn.pipeline import Pipeline
-        from sklearn.base import BaseEstimator, TransformerMixin
-        import matplotlib.pyplot as plt
+        from tensorflow import keras
+        from tensorflow.keras import layers
+        import streamlit as st
+        import plotly.express as px
         
         st.subheader("Dataset Info", divider=True)
         supply = pd.read_csv('commodity_trade_statistics_data.csv')
-        df = pd.DataFrame(supply)
         
-        df['country_or_area'] = df['country_or_area'].astype(str)
-        df['weight_kg'].fillna('weight_kgn', inplace=True)
+        # Step 2: Prepare Dataset
+        Feature1 = ['year', 'comm_code', 'trade_usd', 'weight_kg', 'quantity']
+        Feature2 = ['country_or_area', 'commodity', 'quantity_name', 'category']
+        Target = ['flow']
         
-        # Define target and features
-        target = 'flow'
-        features = ['country_or_area', 'commodity', 'flow',
-                   'quantity_name', 'category']
-
-        # # Check if all features are in the DataFrame
-        if not all(col in df.columns for col in features + [target]):
-            st.error("Some feature columns or target column are missing from the dataset.")
+        # Check if all features exist in the DataFrame
+        missing_features = set(Feature1 + Feature2) - set(supply.columns)
+        if missing_features:
+            st.error(f"Missing features in dataset: {missing_features}")
         else:
-            # Prepare features and target variable
-            X = df[features]
-            y = df[target]
-
-            # Convert categorical columns to string if they contain mixed types
-            for col in X.select_dtypes(include=['object']).columns:
-                X[col] = X[col].astype(str)
-
-            # Handle NaN values by filling with a placeholder or dropping them
-            X.fillna('Unknown', inplace=True)
-
-            # Create a ColumnTransformer with OneHotEncoder for categorical features
-            preprocessor = ColumnTransformer(
-                transformers=[
-                    ('cat', OneHotEncoder(handle_unknown='ignore'), X.select_dtypes(include=['object']).columns.tolist())
-                ],
-                remainder='passthrough'  # Keep other columns unchanged
-            )
-
-            # Create a pipeline for preprocessing and model fitting
-            pipeline = Pipeline([
-                ('preprocessor', preprocessor),  # Preprocessing step
-                ('gnb', GaussianNB())             # Gaussian Naive Bayes model
-            ])
-            # Define a custom transformer to convert sparse matrices to dense
-            class ToDenseTransformer(BaseEstimator, TransformerMixin):
-                def fit(self, X, y=None):
-                    return self
-
-                def transform(self, X):
-                    return X.toarray()
-
-            # Split into training and testing sets
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=42)
-
-            # Fit the model
-            pipeline.fit(X_train, y_train)
-
-            # Make predictions on test data
-            test_predicted = pipeline.predict(X_test)
-
-            # Evaluate the model using confusion matrix
-            cm = confusion_matrix(y_test, test_predicted)
-            
-            # Display confusion matrix using ConfusionMatrixDisplay
-            disp = ConfusionMatrixDisplay(confusion_matrix=cm,
-                                        display_labels=pipeline.classes_)
-
-            # Plotting the confusion matrix in Streamlit
-            st.subheader("Confusion Matrix")
-            
-            fig, ax = plt.subplots(figsize=(8, 6))
-            disp.plot(cmap=plt.cm.Blues, ax=ax)
-            plt.title("Confusion Matrix")
-            
-            st.pyplot(fig)
-
-            # Display classification report (optional)
-            st.subheader("Classification Report")
-            report = classification_report(y_test, test_predicted)
-            st.text(report)
         
+            # Combine features for modeling
+            X = supply[Feature1 + Feature2]
+            y = supply[Target].values
+
+            # One-hot encode categorical variables
+            encoder = OneHotEncoder(sparse_output=False)
+            X_encoded = encoder.fit_transform(X[Feature2])
+
+            # Combine numerical features with encoded categorical features
+            X_final = np.hstack((X[Feature1].values, X_encoded))
+
+            # Split the dataset into training and testing sets
+            X_train, X_test, y_train, y_test = train_test_split(X_final, y, test_size=0.2, random_state=42)
+            
+            #Step 3: Build and Train the Deep Learning Model
+            # Build the neural network model
+            model = keras.Sequential([
+                layers.Dense(64, activation='relu', input_shape=(X_train.shape[1],)),  # Input layer
+                layers.Dense(32, activation='relu'),                                   # Hidden layer
+                layers.Dense(1, activation='sigmoid')                                 # Output layer for binary classification (adjust if needed)
+            ])
+
+            # Compile the model
+            model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
+            # Train the model
+            model.fit(X_train, y_train, epochs=100, batch_size=32)
+            
+            
+            #Step 4: Evaluate Model Accuracy
+            # Evaluate the model on test data
+            loss, accuracy = model.evaluate(X_test, y_test)
+            st.write(f'Test Accuracy: {accuracy:.4f}')
+            
+            #Step 5: Visualize Results
+            # Streamlit app layout
+            st.title("Commodity Trade Statistics Deep Learning Model")
+
+            # Display accuracy
+            st.write(f"Model Accuracy: {accuracy:.4f}")
+
+            # Create a DataFrame for predictions and actual values for comparison
+            predictions = model.predict(X_test).flatten()
+            predicted_classes = (predictions > 0.5).astype(int)
+
+            results_df = pd.DataFrame({
+                'Actual': y_test.flatten(),
+                'Predicted': predicted_classes,
+            })
+
+            # Display results DataFrame
+            st.write("Predictions vs Actual:")
+            st.dataframe(results_df)
+
+            # Create a bar chart for actual vs predicted values using Plotly
+            fig = px.bar(results_df, x=results_df.index,
+                        y=['Actual', 'Predicted'],
+                        title="Actual vs Predicted Values",
+                        labels={'value': 'Flow', 'index': 'Index'},
+                        barmode='group')
+
+            st.plotly_chart(fig)
         
         
 
