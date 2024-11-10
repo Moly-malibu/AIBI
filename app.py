@@ -114,9 +114,6 @@ def Commodity():
         supply = pd.read_csv('commodity_trade_statistics_data.csv')
         df = pd.DataFrame(supply)
 
-        # Streamlit app layout
-        st.title("Export and Import by Products)
-
         # Selectbox for grouping columns
         group_by_country = st.selectbox("Select Flow", options=df['flow'].unique())
         group_by_product = st.selectbox("Select category", options=df['category'].unique())
@@ -152,10 +149,7 @@ def Commodity():
         st.title("Commodity Trade by Country")
         # Load the dataset
         supply = pd.read_csv('commodity_trade_statistics_data.csv')
-
-        # Streamlit app layout
-     
-
+        
         # Selectbox for grouping by country or area
         selected_country = st.selectbox("Select Country or Area", options=supply['country_or_area'].unique())
         selected_commodity = st.selectbox("Select Commodity", options=supply['commodity'].unique())
