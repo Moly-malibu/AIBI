@@ -119,18 +119,22 @@ def Commodity():
         supply = pd.read_csv('commodity_trade_statistics_data.csv')
         supply = pd.DataFrame(supply)
 
-        country_nan = supply[supply['flow'].isnull()].groupby('country_or_area').size().sort_values(ascending=False)
+        country_nan = supply[supply['flow'].isnull()].groupby('trade_usd').size().sort_values(ascending=False)
         category_nan = supply[supply['flow'].isnull()].groupby('category').size().sort_values(ascending=False)
         percentage_miss = supply.isnull().sum() * 100/len(supply)
         supply.nunique(axis=0)
-        df=supply.dropna()
+        supply=supply.dropna()
+        supply = pd.DataFrame(supply)
+
+        # Streamlit app layout
+        st.title("Sales Data Grouping and Export and Import by Category")
 
         # Selectbox for grouping columns
-        group_by_country = st.selectbox("Select Flow", options=df['flow'].unique())
-        group_by_product = st.selectbox("Select category", options=df['category'].unique())
+        group_by_country = st.selectbox("Select Country Flow", options=supply['flow'].unique())
+        group_by_product = st.selectbox("Select Category", options=supply['category'].unique())
 
         # Grouping the data based on user selection
-        grouped_data = df.groupby(['flow']).sum().reset_index()
+        grouped_data = supply.groupby(['flow', 'category']).sum().reset_index()
 
         # Filter based on user selection
         filtered_data = grouped_data[
@@ -143,15 +147,13 @@ def Commodity():
         st.dataframe(filtered_data)
 
         # Create a bar chart using Plotly
-        fig = px.bar(filtered_data, x='flow', y='category',
-                    title=f'category for {group_by_product} in {group_by_country}',
-                    labels={'category': 'flow', 'category': 'category'},
+        fig = px.bar(filtered_data, x='category', y='trade_usd',
+                    title=f'Trade Usd for {group_by_product} in {group_by_country}',
+                    labels={'Trade Usb': 'Total Category', 'category': 'category'},
                     color='category')
 
         # Show the plot in Streamlit
         st.plotly_chart(fig)
-    
-    
     
     elif selected_option == "Category":
         import streamlit as st
@@ -167,6 +169,7 @@ def Commodity():
         percentage_miss = supply.isnull().sum() * 100/len(supply)
         supply.nunique(axis=0)
         supply=supply.dropna()
+        supply = pd.DataFrame(supply)
         
         
         # Selectbox for grouping by country or area
