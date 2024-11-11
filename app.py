@@ -1,19 +1,18 @@
 
 import streamlit as st
 
+#https://media.istockphoto.com/id/1154350410/es/foto/abstracto-de-forma-lisa-para-la-idea-arquitect%C3%B3nica-l%C3%ADnea-curva-fondo-blanco-con-forma-libre.jpg?s=612x612&w=0&k=20&c=odwLLTQeQMzPQsLusqS1mONxZiUIq8DW_0s0J8qNFz0=
 st.markdown("<h1 style='text-align: center; color: #002967;'>🎈Business Intelligence (BI)</h1>", unsafe_allow_html=True)
 # st.markdown("<h1 style='text-align: center; color: #002967;'>Agriculture by Countries</h1>", unsafe_allow_html=True)
 def main():
-    # Register pages
     pages = {
-        "Commodity": Commodity,
-        # "Statistics": Statistics,
-        # "AgroBusiness": AgroBusiness,
-    }
+            "Commodity": Commodity,
+            # "Statistics": Statistics,
+            # "AgroBusiness": AgroBusiness,
+        }
     st.sidebar.title("Statistics")
     page = st.sidebar.selectbox("Select Menu", tuple(pages.keys()))
-    pages[page]()
-
+    pages[page]()    
 def Commodity():
     import streamlit as st
     import pandas as pd
@@ -83,6 +82,12 @@ def Commodity():
         st.write("Select different variables to analyze: Categories")
         supply = pd.read_csv('commodity_trade_statistics_data.csv')
         supply = pd.DataFrame(supply)
+
+        country_nan = supply[supply['weight_kg'].isnull()].groupby('country_or_area').size().sort_values(ascending=False)
+        category_nan = supply[supply['weight_kg'].isnull()].groupby('category').size().sort_values(ascending=False)
+        percentage_miss = supply.isnull().sum() * 100/len(supply)
+        supply.nunique(axis=0)
+        supply=supply.dropna()
         
         grouped = supply.groupby(['country_or_area', 'year', 'comm_code',
                             'trade_usd', 'weight_kg', 'quantity_name', 'category']).agg({'flow': 'sum'}).reset_index()
@@ -112,7 +117,13 @@ def Commodity():
         # Sample dataset creation
         st.subheader("Export and Import by Commodity", divider=True)
         supply = pd.read_csv('commodity_trade_statistics_data.csv')
-        df = pd.DataFrame(supply)
+        supply = pd.DataFrame(supply)
+
+        country_nan = supply[supply['flow'].isnull()].groupby('country_or_area').size().sort_values(ascending=False)
+        category_nan = supply[supply['flow'].isnull()].groupby('category').size().sort_values(ascending=False)
+        percentage_miss = supply.isnull().sum() * 100/len(supply)
+        supply.nunique(axis=0)
+        df=supply.dropna()
 
         # Selectbox for grouping columns
         group_by_country = st.selectbox("Select Flow", options=df['flow'].unique())
@@ -149,6 +160,14 @@ def Commodity():
         st.title("Commodity Trade by Country")
         # Load the dataset
         supply = pd.read_csv('commodity_trade_statistics_data.csv')
+        supply = pd.DataFrame(supply)
+
+        country_nan = supply[supply['year'].isnull()].groupby('trade_usd').size().sort_values(ascending=False)
+        category_nan = supply[supply['country_or_area'].isnull()].groupby('commodity').size().sort_values(ascending=False)
+        percentage_miss = supply.isnull().sum() * 100/len(supply)
+        supply.nunique(axis=0)
+        supply=supply.dropna()
+        
         
         # Selectbox for grouping by country or area
         selected_country = st.selectbox("Select Country or Area", options=supply['country_or_area'].unique())
@@ -186,9 +205,16 @@ def Commodity():
         
         st.subheader("Dataset Info", divider=True)
         supply = pd.read_csv('commodity_trade_statistics_data.csv')
+        supply = pd.DataFrame(supply)
+
+        country_nan = supply[supply['weight_kg'].isnull()].groupby('country_or_area').size().sort_values(ascending=False)
+        category_nan = supply[supply['weight_kg'].isnull()].groupby('category').size().sort_values(ascending=False)
+        percentage_miss = supply.isnull().sum() * 100/len(supply)
+        supply.nunique(axis=0)
+        supply=supply.dropna()
         
         # Step 2: Prepare Dataset
-        Feature1 = ['year', 'comm_code', 'trade_usd', 'weight_kg', 'quantity']
+        Feature1 = ['year', 'comm_code', 'trade_usd', 'weight_kg']
         Feature2 = ['country_or_area', 'commodity', 'quantity_name', 'category']
         Target = ['flow']
         
@@ -217,7 +243,7 @@ def Commodity():
             model = keras.Sequential([
                 layers.Dense(64, activation='relu', input_shape=(X_train.shape[1],)),  # Input layer
                 layers.Dense(32, activation='relu'),                                   # Hidden layer
-                layers.Dense(1, activation='sigmoid')                                 # Output layer for binary classification (adjust if needed)
+                layers.Dense(1, activation='sigmoid')                                 # Output layer for binary classification 
             ])
 
             # Compile the model
