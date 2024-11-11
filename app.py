@@ -26,7 +26,7 @@ def Commodity():
     st.sidebar.header("Menu")
 
     # Define options for the selectbox
-    options = ["Commodity: Statistics", "Visualization", "Category", "Commodity","Predictions"]
+    options = ["Commodity: Statistics", "Visualization", "Category", "Predictions"]
 
     # Create a selectbox in the sidebar
     selected_option = st.sidebar.selectbox("Choose an option:", options)
@@ -109,51 +109,6 @@ def Commodity():
         # Display the figure in Streamlit
         st.plotly_chart(fig)
 
-    elif selected_option == "Commodity":
-        import streamlit as st
-        import pandas as pd
-        import plotly.express as px
-
-        # Sample dataset creation
-        st.subheader("Export and Import by Commodity", divider=True)
-        supply = pd.read_csv('commodity_trade_statistics_data.csv')
-        supply = pd.DataFrame(supply)
-
-        country_nan = supply[supply['flow'].isnull()].groupby('trade_usd').size().sort_values(ascending=False)
-        category_nan = supply[supply['flow'].isnull()].groupby('category').size().sort_values(ascending=False)
-        percentage_miss = supply.isnull().sum() * 100/len(supply)
-        supply.nunique(axis=0)
-        supply=supply.dropna()
-        supply = pd.DataFrame(supply)
-
-        # Streamlit app layout
-        st.title("Sales Data Grouping and Export and Import by Category")
-
-        # Selectbox for grouping columns
-        group_by_country = st.selectbox("Select Country Flow", options=supply['flow'].unique())
-        group_by_product = st.selectbox("Select Category", options=supply['category'].unique())
-
-        # Grouping the data based on user selection
-        grouped_data = supply.groupby(['flow', 'category']).sum().reset_index()
-
-        # Filter based on user selection
-        filtered_data = grouped_data[
-            (grouped_data['flow'] == group_by_country) & 
-            (grouped_data['category'] == group_by_product)
-        ]
-
-        # Display the filtered data
-        st.write("Grouped Data:")
-        st.dataframe(filtered_data)
-
-        # Create a bar chart using Plotly
-        fig = px.bar(filtered_data, x='category', y='trade_usd',
-                    title=f'Trade Usd for {group_by_product} in {group_by_country}',
-                    labels={'Trade Usb': 'Total Category', 'category': 'category'},
-                    color='category')
-
-        # Show the plot in Streamlit
-        st.plotly_chart(fig)
     
     elif selected_option == "Category":
         import streamlit as st
